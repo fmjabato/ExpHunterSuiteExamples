@@ -1,0 +1,127 @@
+rep_$rep){
+	?
+	ngenes_$ngenes){
+		?
+		degprop_$deg){
+			?
+			fc_$fc){
+				?
+				arab_$updowns){
+					echo [cpu]
+					module load R
+					min_fc=1.3
+					min_lfc=0.12
+					max_lfc=2
+					min_pval=0.05
+					countsFile='synth_arab_rep'rep_(+)'_ngenes'ngenes_(+)'_dprop'degprop_(+)'_fc'fc_(+)'_up'(*)
+					# Repeat the process N times
+					rm packages_measures
+					rm votesSystem_measures
+					for i in {1..$n}
+					do
+						# Generate synthetic data (minimum foldchange fixed to 1.3)
+						?
+						degsynth.R -r rep_(+) -n ngenes_(+) -d degprop_(+) -f fc_(+) -F $min_fc -T (*) -o $countsFile
+						# Prepare samples file
+						head $countsFile'_scount' -n 1 | awk '{split($0,arr,"\t"); print "sample\ttreat"; for( i in arr) {aux = arr[i]; gsub(/_.*/, "", arr[i]);print aux"\t"arr[i]}}' > samples.txt
+						# Apply Hunter study
+						degenes_Hunter.R -i $countsFile'_scount' -m DELN -t samples.txt --lfc $min_lfc -p $min_pval
+						# Take target results
+						mv hunter_DE_results/Common_results/hunter_results_table.txt ./
+						mv hunter_DE_results/DEG_report.html ./
+						# Remove unnecessary files
+						rm -rf hunter_DE_results
+						# Transform predictions
+						awk -F'\t' -vcols=DESeq2_DEG,edgeR_DEG,limma_DEG,NOISeq_DEG,genes_tag '(NR==1){n=split(cols,cs,",");for(c=1;c<=n;c++){for(i=1;i<=NF;i++)if($(i)==cs[c])ci[c]=i}}{if(NR!=1){printf "%s" FS,$1; for(i in ci)printf "%s" FS,$(ci[i]+1)}else{printf "%s" FS,"Gene"; for(i in ci)printf "%s" FS,$(ci[i])}; printf "\n"}' hunter_results_table.txt > aux
+						awk 'FNR==NR{a[$1]=$2 FS $3;next}{ print $0, a[$1]}' $countsFile'_predv' aux | sed 's/ //g' > degenes_pred
+						rm metrics
+						echo -e "Sample\tReplicates\tNgenes\tDEGs\tFC_max\tFC_min\tUpRegulated" >> metrics
+						echo -e "Arabidopsis\trep_(+)\tngenes_(+)\tdegprop_(+)\tfc_(+)\t${min_fc}\t(*)" >> metrics
+						# Generate metrics for votes system
+						rtable2measures.R -i hunter_results_table.txt -r $countsFile'_predv' -p $min_pval -f $min_lfc -e metrics -o aux_measures -a auc_measures
+						cat auc_measures >> packages_measures
+						rm auc_measures
+						tail aux_measures -n +2 >> votesSystem_measures
+					done
+				}
+
+				lafora_$updowns){
+					echo [cpu]
+					module load R
+					min_fc=1.3
+					min_lfc=0.12
+					max_lfc=2
+					min_pval=0.05
+					countsFile='synth_lafora_rep'rep_(+)'_ngenes'ngenes_(+)'_dprop'degprop_(+)'_fc'fc_(+)'_up'(*)
+					countTable=$root'/experiments_data/lafora_count_data.txt'
+					# Generate synthetic data (minimum foldchange fixed to 1.3)
+					rm packages_measures
+					rm votesSystem_measures
+					for i in {1..$n}
+					do
+						?
+						degsynth.R -r rep_(+) -n ngenes_(+) -d degprop_(+) -f fc_(+) -F $min_fc -T (*) -o $countsFile -i $countTable -g 1,2,3,4
+						# Prepare samples file
+						head $countsFile'_scount' -n 1 | awk '{split($0,arr,"\t"); print "sample\ttreat"; for( i in arr) {aux = arr[i]; gsub(/_.*/, "", arr[i]);print aux"\t"arr[i]}}' > samples.txt
+						# Apply Hunter study
+						degenes_Hunter.R -i $countsFile'_scount' -m DELN -t samples.txt --lfc $min_lfc -p $min_pval
+						# Take target results
+						mv hunter_DE_results/Common_results/hunter_results_table.txt ./
+						mv hunter_DE_results/DEG_report.html ./
+						# Remove unnecessary files
+						rm -rf hunter_DE_results
+						# Transform predictions
+						awk -F'\t' -vcols=DESeq2_DEG,edgeR_DEG,limma_DEG,NOISeq_DEG,genes_tag '(NR==1){n=split(cols,cs,",");for(c=1;c<=n;c++){for(i=1;i<=NF;i++)if($(i)==cs[c])ci[c]=i}}{if(NR!=1){printf "%s" FS,$1; for(i in ci)printf "%s" FS,$(ci[i]+1)}else{printf "%s" FS,"Gene"; for(i in ci)printf "%s" FS,$(ci[i])}; printf "\n"}' hunter_results_table.txt > aux
+						awk 'FNR==NR{a[$1]=$2 FS $3;next}{ print $0, a[$1]}' $countsFile'_predv' aux | sed 's/ //g' > degenes_pred
+						rm metrics
+						echo -e "Sample\tReplicates\tNgenes\tDEGs\tFC_max\tFC_min\tUpRegulated" >> metrics
+						echo -e "Lafora\trep_(+)\tngenes_(+)\tdegprop_(+)\tfc_(+)\t${min_fc}\t(*)" >> metrics
+						rtable2measures.R -i hunter_results_table.txt -r $countsFile'_predv' -p $min_pval -f $min_lfc -e metrics -o aux_measures -a auc_measures
+						cat auc_measures >> packages_measures
+						rm auc_measures
+						tail aux_measures -n +2 >> votesSystem_measures
+					done
+				}
+
+				pmm2_$updowns){
+					echo [cpu]
+					module load R
+					min_fc=1.3
+					min_lfc=0.12
+					max_lfc=2
+					min_pval=0.05
+					countsFile='synth_pmm2_rep'rep_(+)'_ngenes'ngenes_(+)'_dprop'degprop_(+)'_fc'fc_(+)'_up'(*)
+					countTable=$root'/experiments_data/pmm2_count_data.txt'
+					# Generate synthetic data (minimum foldchange fixed to 1.3)
+					rm packages_measures
+					rm votesSystem_measures
+					for i in {1..$n}
+					do
+						?
+						degsynth.R -r rep_(+) -n ngenes_(+) -d degprop_(+) -f fc_(+) -F $min_fc -T (*) -o $countsFile -i $countTable -g 1,2,3,4,5,6
+						# Prepare samples file
+						head $countsFile'_scount' -n 1 | awk '{split($0,arr,"\t"); print "sample\ttreat"; for( i in arr) {aux = arr[i]; gsub(/_.*/, "", arr[i]);print aux"\t"arr[i]}}' > samples.txt
+						# Apply Hunter study
+						degenes_Hunter.R -i $countsFile'_scount' -m DELN -t samples.txt --lfc $min_lfc -p $min_pval
+						# Take target results
+						mv hunter_DE_results/Common_results/hunter_results_table.txt ./
+						mv hunter_DE_results/DEG_report.html ./
+						# Remove unnecessary files
+						rm -rf hunter_DE_results
+						# Transform predictions
+						awk -F'\t' -vcols=DESeq2_DEG,edgeR_DEG,limma_DEG,NOISeq_DEG,genes_tag '(NR==1){n=split(cols,cs,",");for(c=1;c<=n;c++){for(i=1;i<=NF;i++)if($(i)==cs[c])ci[c]=i}}{if(NR!=1){printf "%s" FS,$1; for(i in ci)printf "%s" FS,$(ci[i]+1)}else{printf "%s" FS,"Gene"; for(i in ci)printf "%s" FS,$(ci[i])}; printf "\n"}' hunter_results_table.txt > aux
+						awk 'FNR==NR{a[$1]=$2 FS $3;next}{ print $0, a[$1]}' $countsFile'_predv' aux | sed 's/ //g' > degenes_pred
+						rm metrics
+						echo -e "Sample\tReplicates\tNgenes\tDEGs\tFC_max\tFC_min\tUpRegulated" >> metrics
+						echo -e "PMM2\trep_(+)\tngenes_(+)\tdegprop_(+)\tfc_(+)\t${min_fc}\t(*)" >> metrics
+						rtable2measures.R -i hunter_results_table.txt -r $countsFile'_predv' -p $min_pval -f $min_lfc -e metrics -o aux_measures -a auc_measures
+						cat auc_measures >> packages_measures
+						rm auc_measures
+						tail aux_measures -n +2 >> votesSystem_measures
+					done
+				}
+			}
+		}
+	}
+}
+

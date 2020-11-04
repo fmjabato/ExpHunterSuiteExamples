@@ -1,0 +1,441 @@
+---
+author: "Fernando Moreno Jabato"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+    fig_width: 12
+---
+
+<style type='text/css'>
+    body .main-container {
+        max-width: 90%;
+    }
+
+    .plot_real_size {
+    	overflow: scroll;
+  	}
+
+    .plot_real_size img{
+    	max-width: none;
+    	max-height: none;
+    }
+
+    embed {
+   		width: 800px;
+  		height: 800px;
+  }   
+</style>
+
+```{r config, include = FALSE}
+ 
+# Load necessary packages
+require(ggplot2)
+require(knitr)
+require(DT)
+require(gridExtra)
+require(canvasXpress)
+
+
+
+# Prepare recursive text
+chunks <- function(code, options = "echo = FALSE"){paste(paste("```{r ",options,"}",sep = ""),code,"```",sep="\n")}
+render <- function(text){paste(knit(text = paste(text,collapse = "\n")),collapse = "\n")}
+
+renderT <- function(tabl){
+  datatable(tabl, filter = 'top', rownames = FALSE, extensions = c('Buttons','ColReorder'),
+            options = list(
+            colReorder = TRUE,
+            dom = 'lftBip',
+            buttons = c('copy', 'csv', 'excel')
+  ))
+}
+
+get_legend<-function(myggplot){
+  tmp <- ggplot_gtable(ggplot_build(myggplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
+
+# Prepare all HPO reports container
+out <- NULL
+ring_weight <- 500
+
+
+```
+
+# **Document summary** 
+This document has been generated for paper (Differential expression, co-expression and functional analysis of RNA-seq data using the DEgenes Hunter suite and its applicability to rare disease):
+
+Measures are calculated with following formulas:
+
+- Accuracy (ACC): $\frac{TP+TN}{TP+TN+FP+FN}$
+- Precission (PPV): $\frac{TP}{TP+FP}$
+- Recall: $\frac{TP}{TP + FN}$
+- Specificity: $\frac{TN}{TN + FP}$
+- F-Measure: $2*\frac{Precision * Recall}{Precision + Recall}$
+
+# **Synthetic results summary** 
+
+Source table with all results is shown with a set of graphics which check the effect, over the AUC of each package, of each configured parameter. Note: samples are mixed in graphs which are not x.axis=Sample. 
+
+```{r plot_set, echo = FALSE}
+#renderT(exp_res)
+
+pps <- lapply(head(seq(ncol(exp_res)),-2),function(i){
+  aux <- cbind(exp_res[,i],exp_res[,c("Package","AUC")])
+  xlab <- colnames(exp_res)[i]
+  colnames(aux) <- c("Pivot","Package","AUC")
+  aux$Pivot <- as.factor(aux$Pivot)
+  pp <- ggplot(aux,aes(x = Pivot, y = AUC, color = Package)) + 
+        labs(x = xlab) + 
+        geom_boxplot()
+  return(pp)
+})
+
+# remove legends
+legend <- get_legend(pps[[1]]+ theme(legend.position = "bottom"))
+# Remove legend from plot
+pps <- lapply(pps,function(pp){pp + theme(legend.position = "none")})
+# Plot
+graphs_height <- 5
+grid.arrange(grobs=append(pps,list(legend)), ncol = 2, heights = c(rep(graphs_height,length(pps)/2),graphs_height))
+```
+
+Also, a sumamry of all datasets are compared bellow fixing the number of genes to minimum and number of replicates to minimum, showing a grid with samples (rows) and DEG proportions (columns) and a plot of AUC obtained (y-axis) depending on the maximum fold-change simulated (x-axis) and grouping by package results (colors):
+```{r summary_samples, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10}
+# Prepare uniques
+min_replicates <- min(exp_res$Replicates)
+samples <- unique(exp_res$Sample)
+max_genes <- max(exp_res$Genes)
+min_genes <- min(exp_res$Genes)
+DEGProps <- unique(exp_res$DEGprop)
+max_FCs <- unique(exp_res$Max_FC)
+
+# Prepare auxiliar variables
+summ_res <- exp_res[exp_res$Replicates == min_replicates & exp_res$Genes == min_genes,]
+
+# Prepare plots container
+summary_samples_plots <- list()
+
+# Prepare row plots (samples)
+invisible(lapply(samples, function(smpl){
+  # Take set
+  smpl_res <- summ_res[summ_res$Sample == smpl,]
+  smpl_res$Max_FC <- as.factor(smpl_res$Max_FC) 
+  # Prepare column plots (DEG_prop)
+  invisible(lapply(DEGProps,function(deg){
+    # Plot
+    pp <- ggplot(smpl_res[smpl_res$DEGprop == deg,], aes(x = Max_FC,y = AUC, color = Package)) + 
+          ylim(c(0.5,1)) +
+          geom_boxplot(na.rm = TRUE)
+    # Prepare plot
+    if(deg == head(DEGProps,1)){ # First column
+      pp <- pp + labs(y = smpl)
+    }else{
+      pp <- pp + labs(y = '')            
+    }
+    if(smpl == tail(samples,1)){ # Last row
+      pp <- pp + labs(x = paste0('DEGprop = ',deg))
+    }else{
+      pp <- pp + labs(x = '')            
+    }
+
+    # Store      
+    summary_samples_plots <<- append(summary_samples_plots,list(pp))
+  }))
+}))
+
+# Plot grid
+legend <- get_legend(summary_samples_plots[[1]]+ theme(legend.position = 'bottom'))
+summary_samples_plots <- lapply(summary_samples_plots,function(pp){pp + theme(legend.position = 'none')})
+# RENDER Plots
+grid.arrange(grobs = append(summary_samples_plots,list(legend)), 
+             ncol = length(DEGProps), 
+             top = paste0('Measure: AUC; Replicates: ',min_replicates,'; Genes: ',min_genes), 
+             heights = c(rep(500,length(summary_samples_plots)/length(DEGProps)),100))
+
+```
+
+Finally, a comparisson between Vote and Combined systems is shown using different measures (rows) into each sample (columns), also two dashed lines have been added at mean of combined and largest cut of both systems:
+```{r summary_tagsystems, echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10}
+# Prepare uniques
+measures <- c('ACC','Precision','Recall','Specificity','FMeasure')
+
+# Prepare auxiliar variables
+summ_res <- vot_res[vot_res$Replicates == min_replicates & vot_res$Genes == min_genes & vot_res$DEGprop == 0.05,]
+
+# Prepare plots container
+summary_samples_plots <- list()
+
+# Prepare row plots (measures)
+invisible(lapply(measures,function(msr){
+  # Obtain subset
+  msr_res <- summ_res[,c("Sample","Cut",msr)]
+  colnames(msr_res) <- c("Sample","Cut","Feature")
+  # Prepare column plots (samples)
+  invisible(lapply(samples,function(smpl){
+      pp <- ggplot(msr_res[msr_res$Sample == smpl,], aes(y = Feature, color = Cut)) + 
+            ylim(c(0,1)) +
+            theme(axis.text.x=element_blank()) +
+            geom_boxplot(na.rm = TRUE)
+     
+      # Take useful info
+      ppinfo <- ggplot_build(pp)
+
+      # Prepare plot
+      if(smpl == head(samples,1)){ # First column
+        pp <- pp + labs(y = msr)
+      }else{
+        pp <- pp + labs(y = '')            
+      }
+      if(msr == tail(measures,1)){ # Last row
+        pp <- pp + labs(x = smpl)
+      }else{
+        pp <- pp + labs(x = '')            
+      }
+
+      pp <- pp +
+            geom_hline(yintercept = head(ppinfo$data[[1]]$middle,1), color = head(ppinfo$data[[1]]$colour,1), linetype = 'dashed') +
+            geom_hline(yintercept = tail(ppinfo$data[[1]]$middle,1), color = tail(ppinfo$data[[1]]$colour,1), linetype = 'dashed')
+      # Store      
+      summary_samples_plots <<- append(summary_samples_plots,list(pp))
+  }))
+}))
+
+# Plot grid
+legend <- get_legend(summary_samples_plots[[1]]+ theme(legend.position = 'bottom'))
+summary_samples_plots <- lapply(summary_samples_plots,function(pp){pp + theme(legend.position = 'none')})
+# RENDER Plots
+grid.arrange(grobs = append(summary_samples_plots,list(legend)), 
+             ncol = length(samples), 
+             top = paste0('DEG_Proportion: 0.05; Replicates: ',min_replicates,'; Genes: ',min_genes), 
+             heights = c(rep(500,length(summary_samples_plots)/length(samples)),100))
+
+
+
+```
+
+
+
+```{r per_sample, echo = FALSE}
+out <- NULL
+
+# Prepare common variables
+if(exists("vot_res")){
+  measures <- c('ACC','Precision','Recall','Specificity','FMeasure')
+}
+
+
+# Generate chunks dinamically
+invisible(lapply(unique(exp_res$Sample),function(esample){
+  #### HEADER
+  header <- "# **Sample {{esample}}**"
+  body1 <- "Results for especific sample ({{esample}})."
+  sample_code <- "
+    smpl_res <- exp_res[exp_res$Sample == '{{esample}}',]
+    #smpl_res$Max_FC <- as.character(smpl_res$Max_FC)
+
+    if(exists('vot_res')){
+        # Take sample
+        smpl_vot_res <- vot_res[vot_res$Sample == '{{esample}}',]
+
+        # Prepare uniques
+        # replicates <- unique(smpl_vot_res$Replicates)
+        # genes <- unique(smpl_vot_res$Genes)
+        # DEGProps <- unique(smpl_vot_res$DEGprop)
+        # max_FCs <- unique(smpl_vot_res$Max_FC)
+        # cuts <- unique(smpl_vot_res$Cut)
+
+        # # Prepare section items :: <Genes>_<Replicates>_<Cut>
+        # section_items <- expand.grid(genes,replicates,cuts)
+        # colnames(section_items) <- c('Genes','Replicates','Cut')
+        # section_items$Name <- paste(section_items$Genes,section_items$Replicates,section_items$Cut,sep = '_')
+
+        # # Prepare ring items :: <Max_FC>_<DEG_Prop>
+        # ring_items <- expand.grid(max_FCs,DEGProps)
+        # colnames(ring_items) <- c('Max_FC','DEG_Prop')
+        # ring_items$Name <- paste(ring_items$Max_FC,ring_items$DEG_Prop,sep = '_')
+
+        # # Prepare X
+        # X <- data.frame(Genes = section_items$Genes)
+        # rownames(X) <- section_items$Name
+
+        # # Prepare Z
+        # Z <- data.frame(Max_FC = ring_items$Max_FC)
+        # rownames(Z) <- ring_items$Name
+    }
+  "
+
+
+  #### SUMMARY
+  body_summary <- "Summary for this sample:"
+  code_summary <- "renderT(smpl_res)
+    pps <- lapply(head(seq(ncol(smpl_res)),-2),function(i){
+    aux <- cbind(smpl_res[,i],smpl_res[,c('Package','AUC')])
+    xlab <- colnames(smpl_res)[i]
+    colnames(aux) <- c('Pivot','Package','AUC')
+    aux$Pivot <- as.factor(aux$Pivot)
+    pp <- ggplot(aux,aes(x = Pivot, y = AUC, color = Package)) + 
+          labs(x = xlab) + 
+          geom_boxplot()
+    return(pp)
+  })
+
+  # remove legends
+  legend <- get_legend(pps[[1]]+ theme(legend.position = 'bottom'))
+  # Remove legend from plot
+  pps <- lapply(pps,function(pp){pp + theme(legend.position = 'none')})
+  # Plot
+  graphs_height <- 5
+  grid.arrange(grobs=append(pps,list(legend)), ncol = 2, heights = c(rep(graphs_height,length(pps)/2),graphs_height))  "
+
+
+  #### GRID STUDY
+  body_grid <- "\n## **Extended study : {{esample}}**\n\nPer each configuration, a plot of AUC (y) grouped by maximum logFC to simulate (x) will be plotted, grouping by number of genes (rows) and DEG proportion (columns) simulated:"
+  code_grid <- "
+    # Prepare uniques
+    replicates <- unique(smpl_res$Replicates)
+    genes <- unique(smpl_res$Genes)
+    DEGProps <- unique(smpl_res$DEGprop)
+    max_FCs <- unique(smpl_res$Max_FC)
+
+    # Prepare plots
+    invisible(lapply(replicates,function(rpl){
+      # Take subset
+      rpl_res <- smpl_res[smpl_res$Replicates == rpl,]
+      # Prepare plots
+      rpl_plots <- list()
+      invisible(lapply(genes,function(gn){ # Rows
+        # Take subset
+        gn_res <- rpl_res[rpl_res$Genes == gn,]
+        gn_res$Max_FC <- as.factor(gn_res$Max_FC) 
+        # Prepare plots
+        invisible(lapply(DEGProps, function(prop){ # Columns
+          # Generate plot
+          pp <- ggplot(gn_res[gn_res$DEGprop == prop,], aes(x = Max_FC,y = AUC, color = Package)) + 
+                ylim(c(0.5,1)) +
+                geom_boxplot(na.rm = TRUE)
+            #    geom_point(na.rm = TRUE) +
+            #    geom_line(na.rm = TRUE)
+          # Prepare plot
+          if(prop == head(DEGProps,1)){ # First column
+            pp <- pp + labs(y = paste0('Genes = ',gn))
+          }else{
+            pp <- pp + labs(y = '')            
+          }
+          if(gn == tail(genes,1)){ # Last row
+            pp <- pp + labs(x = paste0('DEGprop = ',prop))
+          }else{
+            pp <- pp + labs(x = '')            
+          }
+
+          # Store      
+          rpl_plots <<- append(rpl_plots,list(pp))
+        }))
+      }))
+      # Prepare plots
+      legend <- get_legend(rpl_plots[[1]]+ theme(legend.position = 'bottom'))
+      rpl_plots <- lapply(rpl_plots,function(pp){pp + theme(legend.position = 'none')})
+      # RENDER Plots
+      grid.arrange(grobs = append(rpl_plots,list(legend)), ncol = length(DEGProps), top = paste0('Sample: {{esample}}; Measure: AUC; Replicates : ',rpl,'; Data: Scores'), heights = c(rep(500,length(rpl_plots)/length(DEGProps)),100))
+    }))
+
+  "
+
+
+  #### VOTE SYSTEM MEASURES
+  if(exists("vot_res")){
+    body_votes <- "\n## **Vote systems results : {{esample}}**\n\nMeasures (y) comparisson for all possible vote systems thresholds (x) grouping by number of replicates (columns) and each configuration (grid set):"
+
+    code_votes <- "
+    # Prepare useful variables
+      pivot_columns <- c('Cut','Replicates')
+      # Prepare uniques
+      votecuts <- unique(vot_res$Cut)
+      votemeasures <- c('ACC','Precision','Recall','Specificity','FMeasure')
+      votemeasures <- votemeasures[votemeasures %in% colnames(vot_res)]
+
+
+      # Prepare plots
+      invisible(lapply(genes, function(gn){
+        # Take subset
+        gn_res <- smpl_vot_res[smpl_vot_res$Genes == gn,]
+        # Prepare plots set
+        gn_plots <- list()
+        # Prepare row plots
+        invisible(lapply(votemeasures, function(msr){
+          # Prepare subset
+          msr_res <- gn_res[,c(pivot_columns,msr)]
+          colnames(msr_res) <- c(pivot_columns,'Feature')
+          # Prepare column plots
+          invisible(lapply(replicates,function(rpl){
+            # Generate plot
+            pp <- ggplot(msr_res[msr_res$Replicates == rpl,], aes(y = Feature, color = Cut)) + 
+                  ylim(c(0,1)) +
+                  theme(axis.text.x=element_blank()) +
+                  geom_boxplot(na.rm = TRUE)
+              #    geom_point(na.rm = TRUE) +
+              #    geom_line(na.rm = TRUE)
+            # Take useful info
+            ppinfo <- ggplot_build(pp)
+
+            # Prepare plot
+            if(rpl == head(replicates,1)){ # Last row
+              pp <- pp + labs(y = msr)
+            }else{
+              pp <- pp + labs(y = '')            
+            }
+            if(msr == tail(votemeasures,1)){ # First column
+              pp <- pp + labs(x = paste0('Replicates = ',rpl))
+            }else{
+              pp <- pp + labs(x = '')            
+            }
+            
+            pp <- pp +
+                  geom_hline(yintercept = head(ppinfo$data[[1]]$middle,1), color = head(ppinfo$data[[1]]$colour,1), linetype = 'dashed') +
+                  geom_hline(yintercept = tail(ppinfo$data[[1]]$middle,1), color = tail(ppinfo$data[[1]]$colour,1), linetype = 'dashed')
+            # Store      
+            gn_plots <<- append(gn_plots,list(pp))
+          }))
+        }))
+      
+        # Prepare plots
+        legend <- get_legend(gn_plots[[1]]+ theme(legend.position = 'bottom'))
+        gn_plots <- lapply(gn_plots,function(pp){pp + theme(legend.position = 'none')})
+        # RENDER Plots
+        grid.arrange(grobs = append(gn_plots,list(legend)), ncol = length(replicates), top = paste0('Sample: {{esample}}; Genes = ',gn,'; Data: Votes System'), heights = c(rep(500,length(gn_plots)/length(replicates)),100))
+      }))
+      "
+  }else{
+    body_votes <- ""
+    code_votes <- ""
+  }
+
+
+  #### RENDER OUTPUT
+  out <<- c(out,knit_expand(text = paste(c(header,
+                                          body1,
+                                          chunks(sample_code),
+                                          body_summary,
+                                          chunks(code_summary),
+                                          body_grid,
+                                          chunks(code_grid,"echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10"),
+                                          body_votes,
+                                          chunks(code_votes,"echo = FALSE, warning = FALSE, message = FALSE, fig.height = 13"),
+                                          "\n"), collapse = "\n")))
+
+
+}))
+
+
+
+``` 
+
+
+`r paste(knit(text = paste(out,collapse = "\n")),collapse = "\n")`
+
+
+##
