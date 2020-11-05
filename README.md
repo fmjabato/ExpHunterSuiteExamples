@@ -20,6 +20,12 @@ A new HTML file with the results report must has been generated
 
 **Important:** this scripts uses Autoflow, be sure to has it installed in your system (https://github.com/seoanezonjic/autoflow)
 
+# Lafora / PMM2
+In order to replicate these experiment (Lafora or PMM2) you must:
+
+1. Install and configure your R environment as is explained in https://github.com/seoanezonjic/DEgenesHunter
+2. Execute file launch_DEgenesHunter.sh stored in specific folder.
+
 # Spike-ins 
 In order to replicate these experiments you must:
 
