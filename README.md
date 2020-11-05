@@ -19,3 +19,12 @@ Once execution has finished:
 A new HTML file with the results report must has been generated
 
 **Important:** this scripts uses Autoflow, be sure to has it installed in your system (https://github.com/seoanezonjic/autoflow)
+
+# Spike-ins 
+In order to replicate these experiments you must:
+
+1. Install and configure your R environment as is explained in https://github.com/seoanezonjic/DEgenesHunter
+2. Configure your download folder and your JSON credential in ncbi_sra_file_downloader.sh. If you don't habe a NCBI credential, check this link https://www.ncbi.nlm.nih.gov/home/develop/https-guidance/
+3. Once files have been downloaded, execute conversion configuring variables in conversion_loop.sh and execute.
+4. At this point, you must use a clean&map program to transform fastq files into count tables.
+5. Use count tables obtained to execute DEgenes Hunter expression analysis as done in Lafora or PMM2 but changing input file.
