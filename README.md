@@ -4,7 +4,7 @@ This repository includes code to generate synthtetic results published in paper 
 
 Also, supplementary files for this paper are stored here.
 
-# Usage
+# Synthetic Experiments
 In order to replicate these experiments you must:
 
 1. Install and configure your R environment as is explained in https://github.com/seoanezonjic/DEgenesHunter
