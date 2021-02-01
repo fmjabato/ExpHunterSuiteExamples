@@ -152,8 +152,11 @@ invisible(lapply(samples, function(smpl){
 legend <- get_legend(summary_samples_plots[[1]]+ theme(legend.position = 'bottom'))
 summary_samples_plots <- lapply(summary_samples_plots,function(pp){pp + theme(legend.position = 'none')})
 # RENDER Plots
+my_layout <- t(matrix(seq_along(summary_samples_plots), nrow = length(DEGProps)))
+my_layout <- rbind(my_layout, matrix(rep(length(summary_samples_plots)+1,length(DEGProps)),ncol = length(DEGProps)))
 grid.arrange(grobs = append(summary_samples_plots,list(legend)), 
              ncol = length(DEGProps), 
+             layout_matrix = my_layout,
              top = paste0('Measure: AUC; Replicates: ',min_replicates,'; Genes: ',min_genes), 
              heights = c(rep(500,length(summary_samples_plots)/length(DEGProps)),100))
 
@@ -209,8 +212,11 @@ invisible(lapply(measures,function(msr){
 legend <- get_legend(summary_samples_plots[[1]]+ theme(legend.position = 'bottom'))
 summary_samples_plots <- lapply(summary_samples_plots,function(pp){pp + theme(legend.position = 'none')})
 # RENDER Plots
+my_layout <- t(matrix(seq_along(summary_samples_plots), nrow = length(samples)))
+my_layout <- rbind(my_layout, matrix(rep(length(summary_samples_plots)+1,length(samples)),ncol = length(samples)))
 grid.arrange(grobs = append(summary_samples_plots,list(legend)), 
-             ncol = length(samples), 
+             ncol = length(samples),
+             layout_matrix = my_layout, 
              top = paste0('DEG_Proportion: 0.05; Replicates: ',min_replicates,'; Genes: ',min_genes), 
              heights = c(rep(500,length(summary_samples_plots)/length(samples)),100))
 
@@ -340,7 +346,13 @@ invisible(lapply(unique(exp_res$Sample),function(esample){
       legend <- get_legend(rpl_plots[[1]]+ theme(legend.position = 'bottom'))
       rpl_plots <- lapply(rpl_plots,function(pp){pp + theme(legend.position = 'none')})
       # RENDER Plots
-      grid.arrange(grobs = append(rpl_plots,list(legend)), ncol = length(DEGProps), top = paste0('Sample: {{esample}}; Measure: AUC; Replicates : ',rpl,'; Data: Scores'), heights = c(rep(500,length(rpl_plots)/length(DEGProps)),100))
+      my_layout <- t(matrix(seq_along(rpl_plots), nrow = length(DEGProps)))
+      my_layout <- rbind(my_layout, matrix(rep(length(rpl_plots)+1,length(DEGProps)),ncol = length(DEGProps)))
+      grid.arrange(grobs = append(rpl_plots,list(legend)), 
+                    ncol = length(DEGProps),
+                    layout_matrix = my_layout, 
+                    top = paste0('Sample: {{esample}}; Measure: AUC; Replicates : ',rpl,'; Data: Scores'), 
+                    heights = c(rep(500,length(rpl_plots)/length(DEGProps)),100))
     }))
 
   "
@@ -406,7 +418,13 @@ invisible(lapply(unique(exp_res$Sample),function(esample){
         legend <- get_legend(gn_plots[[1]]+ theme(legend.position = 'bottom'))
         gn_plots <- lapply(gn_plots,function(pp){pp + theme(legend.position = 'none')})
         # RENDER Plots
-        grid.arrange(grobs = append(gn_plots,list(legend)), ncol = length(replicates), top = paste0('Sample: {{esample}}; Genes = ',gn,'; Data: Votes System'), heights = c(rep(500,length(gn_plots)/length(replicates)),100))
+        my_layout <- t(matrix(seq_along(gn_plots), nrow = length(replicates)))
+        my_layout <- rbind(my_layout, matrix(rep(length(gn_plots)+1,length(replicates)),ncol = length(replicates)))
+        grid.arrange(grobs = append(gn_plots,list(legend)), 
+                    ncol = length(replicates), 
+                    layout_matrix = my_layout,
+                    top = paste0('Sample: {{esample}}; Genes = ',gn,'; Data: Votes System'), 
+                    heights = c(rep(500,length(gn_plots)/length(replicates)),100))
       }))
       "
   }else{
